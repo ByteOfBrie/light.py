@@ -212,14 +212,14 @@ def main():
     seed = border(seed)
     seed = fill_rand(seed)
 
+    #time the lighting computation
     start_time = time.time()
     for i in range(SAMPLESIZE):
         for i in range(VOLSIZE):
             dest[i] = 0
-        #dest = [0]*VOLSIZE  #may not be necessary, was memset in the c code
         light(seed, dest, seed_queue, scan_seed(seed, seed_queue, 0))
     end_time = time.time()
-    elapsed = end_time - start_time     #may not be the same as the c code
+    elapsed = end_time - start_time
 
     # show the chunk for debugging
     print_chunk(dest)
@@ -228,5 +228,6 @@ def main():
                                                   SAMPLESIZE / elapsed))
 
 if __name__ == '__main__':
+    '''call main twice, the first run is to warm up pypy'''
     main()
     main()
