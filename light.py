@@ -18,6 +18,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 import time
 import random
 import array
+import argparse
 
 #linear, crossectional, and volumetric size */
 LINSIZE = 16 + 4
@@ -30,8 +31,7 @@ DZ = AREASIZE
 
 # placeholder opaque light value for debugging
 OPAQUE = -128
-# benchmark sample size - 12.8s for 100000 on my machine with -O3
-SAMPLESIZE = 10000
+# c code - 12.8s for 100000 on Eric's machine
 
 '''
 arrays are packed: DX*x + DY*y + DZ*z
@@ -74,7 +74,6 @@ def fill(index, seed, dest, seed_queue, end):
     '''
     returns int pointer
 
-    int index
     seed - source array of seed for light values
     dest - destination array of calculated light values
     seed_queue - queue of light seeds
@@ -161,15 +160,7 @@ def border(seed):
 
 def access(base, x, y, z):
     '''
-    returns char *access
-
-    char *base
-    int x
-    int y
-    int z
-
-    is this even used?
-
+    converts x,y,z into the indexed value if base is 0
     reverse (index//DZ, (index%DZ)//DY, (index%DZ)%DY)
     '''
     assert(x >= 0 and x < LINSIZE)
@@ -179,9 +170,8 @@ def access(base, x, y, z):
 
 def fill_rand(seed):
     '''
-    returns void
-
-    char *seed
+    Fills up seed with randomly generated seed values
+    creates valid data to test the light value computations with
     '''
     m = LINSIZE - 1
     value = 0
@@ -203,6 +193,27 @@ def fill_rand(seed):
     return seed
 
 def main():
+    '''
+    sets up the arrays, fills with random values,
+    and then evaluates the light values SAMPLESIZE times
+    '''
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', dest='samplesize', type=int, default=10000,
+                        help='number of times to run the light computations')
+    parser.add_argument('-v', '--display', action='store_true',
+                        help='display the resulting light values')
+    parser.add_argument('-S', '--seed', dest='seed', type=int, default=None,
+                        help='seed the random number generator')
+    
+    args = parser.parse_args()
+
+    SAMPLESIZE = args.samplesize
+    DISPLAY = args.display
+    RANDOM_SEED = args.seed
+
+    random.seed(RANDOM_SEED)
+
     # setup the data structures to be used
     seed = array.array('i', [0]*VOLSIZE)
     dest = array.array('i', [0]*VOLSIZE)
@@ -212,7 +223,7 @@ def main():
     seed = border(seed)
     seed = fill_rand(seed)
 
-    #time the lighting computation
+    # time the lighting computation
     start_time = time.time()
     for i in range(SAMPLESIZE):
         for i in range(VOLSIZE):
@@ -222,7 +233,8 @@ def main():
     elapsed = end_time - start_time
 
     # show the chunk for debugging
-    print_chunk(dest)
+    if DISPLAY:
+        print_chunk(dest)
 
     print('{} loops in {}s ({} loops/sec)'.format(SAMPLESIZE, elapsed,
                                                   SAMPLESIZE / elapsed))
